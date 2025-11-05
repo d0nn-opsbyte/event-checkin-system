@@ -1,23 +1,24 @@
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from models import db
-from config import Config
-from routes.auth_routes import auth_bp
-from routes.event_routes import event_bp
+from models import db  
+import routes
 
 app = Flask(__name__)
-app.config.from_object(Config)
+CORS(app)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = 'dev-secret-please-change'
 
 db.init_app(app)
-CORS(app)
 jwt = JWTManager(app)
 
-app.register_blueprint(auth_bp)
-app.register_blueprint(event_bp)
 
-with app.register_blueprint(auth_bp):
-    db.create_all()
+routes.init_routes(app)
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
