@@ -10,44 +10,47 @@ function RegisterPage({ login }) {
     const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-        if (password !== confirmPassword) {
-            setError('Passwords do not match!');
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const response = await fetch('http://127.0.0.1:5000/api/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: name,
-                    email: email,
-                    password: password
-                })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                login(result.user, result.token);
-            } else {
-                setError(result.message || 'Something went wrong!');
-            }
-
-        } catch (err) {
-            setError('Cannot connect to server. Please try again later.');
-            console.log('Error:', err);
-        }
-
+    if (password !== confirmPassword) {
+        setError('Passwords do not match!');
         setLoading(false);
-    };
+        return;
+    }
+
+    try {
+        const response = await fetch('http://127.0.0.1:5000/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                password: password
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Show success message and redirect to login
+            alert('Registration successful! Please login.');
+            // Redirect to login page instead of calling login()
+            window.location.href = '/login';
+        } else {
+            setError(result.error || result.message || 'Registration failed!');
+        }
+
+    } catch (err) {
+        setError('Cannot connect to server. Please try again later.');
+        console.log('Error:', err);
+    }
+
+    setLoading(false);
+};
 
     return (
         <div className="register-container">

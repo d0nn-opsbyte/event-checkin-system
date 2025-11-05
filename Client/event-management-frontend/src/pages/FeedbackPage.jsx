@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 
-function FeedbackPage() {
+function FeedbackPage({ user }) {
     const [events, setEvents] = useState([]);
     const [selectedEvent, setSelectedEvent] = useState('');
-    const [rating, setRating] = useState(5);
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
     const [comment, setComment] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
     useEffect(() => {
         const getEvents = async () => {
-            setLoading(true);
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/events');
+                const response = await fetch('http://127.0.0.1:5000/events');
                 if (response.ok) {
                     const data = await response.json();
                     setEvents(data);
@@ -22,98 +22,101 @@ function FeedbackPage() {
             } catch (err) {
                 setMessage('Cannot connect to server');
             }
-            setLoading(false);
         };
 
         getEvents();
     }, []);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+   const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedEvent || !rating) {
+        setMessage('Please select an event and provide a rating');
+        return;
+    }
 
-        if (!selectedEvent) {
-            setMessage('Please select an event');
-            return;
+    setLoading(true);
+    setMessage('');
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://127.0.0.1:5000/events/${selectedEvent}/feedback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                rating: rating,
+                comments: comment  
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            setMessage('✅ Feedback submitted successfully!');
+            setSelectedEvent('');
+            setRating(0);
+            setComment('');
+        } else {
+            setMessage('❌ Failed to submit feedback: ' + (result.error || 'Unknown error'));
         }
-
-        setLoading(true);
-        setMessage('');
-
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/api/events/${selectedEvent}/feedback`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    rating: rating,
-                    comment: comment
-                })
-            });
-
-            if (response.ok) {
-                setMessage('Thank you for your feedback!');
-                setSelectedEvent('');
-                setRating(5);
-                setComment('');
-            } else {
-                setMessage('Error submitting feedback');
-            }
-        } catch (err) {
-            setMessage('Cannot connect to server');
-        }
-
-        setLoading(false);
-    };
+    } catch (err) {
+        setMessage('❌ Error submitting feedback');
+    }
+    setLoading(false);
+};
 
     return (
         <div className="feedback-page">
-            <h1>Submit Feedback</h1>
-
+            <h1>Submit Event Feedback</h1>
+            
             {message && (
-                <div className={message.includes('Thank') ? 'success-message' : 'error-message'}>
+                <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
                     {message}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="feedback-form">
                 <div className="form-group">
                     <label>Select Event:</label>
-                    {loading ? (
-                        <div>Loading events...</div>
-                    ) : (
-                        <select
-                            value={selectedEvent}
-                            onChange={(e) => setSelectedEvent(e.target.value)}
-                            required
-                        >
-                            <option value="">Choose an event...</option>
-                            {events.map((event) => (
-                                <option key={event.id} value={event.id}>
-                                    {event.title}
-                                </option>
-                            ))}
-                        </select>
-                    )}
+                    <select 
+                        value={selectedEvent} 
+                        onChange={(e) => setSelectedEvent(e.target.value)}
+                        required
+                    >
+                        <option value="">Choose an event...</option>
+                        {events.map(event => (
+                            <option key={event.id} value={event.id}>
+                                {event.title} {event.date ? `(${event.date})` : ''}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="form-group">
-                    <label>Rating: {rating} ⭐</label>
-                    <input
-                        type="range"
-                        min="1"
-                        max="5"
-                        value={rating}
-                        onChange={(e) => setRating(parseInt(e.target.value))}
-                    />
-                    <div className="rating-labels">
-                        <span>1 (Poor)</span>
-                        <span>5 (Excellent)</span>
+                    <label>Rating:</label>
+                    <div className="rating-stars">
+                        {[1, 2, 3, 4, 5].map(star => (
+                            <button
+                                key={star}
+                                type="button"
+                                className={`star ${star <= (hoverRating || rating) ? 'active' : ''}`}
+                                onClick={() => setRating(star)}
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                            >
+                                ★
+                            </button>
+                        ))}
+                    </div>
+                    <div className="rating-text">
+                        {rating > 0 ? `${rating} out of 5 stars` : 'Click stars to rate'}
                     </div>
                 </div>
 
                 <div className="form-group">
-                    <label>Comments:</label>
+                    <label>Comments (optional):</label>
                     <textarea
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
@@ -122,10 +125,15 @@ function FeedbackPage() {
                     />
                 </div>
 
-                <button type="submit" disabled={loading} className="submit-btn">
+                <button 
+                    type="submit" 
+                    disabled={loading || !rating || !selectedEvent}
+                    className="submit-btn"
+                >
                     {loading ? 'Submitting...' : 'Submit Feedback'}
                 </button>
             </form>
+
         </div>
     );
 }

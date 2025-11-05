@@ -24,23 +24,32 @@ function LoginPage({ login }) {
                 })
             });
 
+            console.log('Response status:', response.status);
+
             const result = await response.json();
+            console.log('Server response:', result); 
 
             if (response.ok) {
-                const token = result.token;
-                const user = result.user;
                 
-                if (user && token) {
+                const user = {
+                    name: result.name,
+                    email: email, 
+                    role: result.role
+                };
+                const token = result.token;
+                
+                if (token && user.name && user.role) {
                     login(user, token);
                 } else {
-                    setError('Invalid response from server');
+                    setError('Invalid response from server - missing required fields');
                 }
             } else {
-                setError(result.message || 'Login failed');
+                setError(result.error || result.message || 'Login failed');
             }
 
         } catch (err) {
             setError('Cannot connect to server');
+            console.error('Login error:', err);
         }
 
         setLoading(false);

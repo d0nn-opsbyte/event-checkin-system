@@ -20,7 +20,7 @@ class User(db.Model):
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
-    date = db.Column(db.DateTime, nullable=False)
+    date = db.Column(db.String(100), nullable=True) 
     venue = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
@@ -30,4 +30,20 @@ class Feedback(db.Model):
     comments = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+
+class Registration(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    registered_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    user = db.relationship('User', backref=db.backref('registrations', lazy=True))
+    event = db.relationship('Event', backref=db.backref('registrations', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'event_id': self.event_id,
+            'registered_at': self.registered_at.isoformat()
+        } 
