@@ -1,25 +1,70 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import NAvbar from './components/Navbar';
+import LoginPage from  './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import EventsPage from './pages/EventsPage';
+import FeedbackPage from './pages/FeedbackPage';
+import AdminPage from './pages/AdminPage'
+import { getUserRole} from './api/axiosConfig';
 
-function App() {
+function App(){
+  const [ user, setUser] = useState(null);
+  const [ loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    if ( token && userData ){
+      setUser(JSON.parse(userData));
+    }
+    setLoading(false);
+  }, []);
+
+  const login = (userData, token) => {
+    setUser(userData);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <div className="app">
+        <NAvbar user={user} logout={logout} />
+        <Routes>
+<Route
+path="/login"
+element={!user ? <LoginPage login={login} /> : <Navigate to="/events" />}
+/>
+<Route
+path="/register"
+element={!user ? <RegisterPage login={login} /> : <Navigate to="/events" />}
+/>
+<Route
+path="/events"
+element={<EventsPage user={user} />}
+/>
+<Route
+path="/feedback"
+element={user ? <FeedbackPage user={user} /> : <Navigate to="/login" />}
+/>
+<Route
+path="/admin"
+element={user && user.role === 'admin' ? <AdminPage user={user} /> : <Navigate to="/events" />}
+/>
+<Route path="/" element={<Navigate to="/events" />} />
+</Routes>
+      </div>
+    </Router>
   );
 }
-
-export default App;
