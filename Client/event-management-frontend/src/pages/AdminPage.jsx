@@ -12,48 +12,67 @@ function AdminPage() {
     });
     const [loading, setLoading] = useState(true);
 
-    const sampleEvents = [
-        {
-            id: 1,
-            title: 'React Fundamentals Workshop',
-            date: '2024-02-15',
-            venue: 'Conference Room A',
-            description: 'Learn the basics of React development'
-        }
-    ];
-
-    const sampleFeedbacks = [
-        {
-            id: 1,
-            userName: 'John Doe',
-            eventTitle: 'React Fundamentals Workshop',
-            rating: 5,
-            comment: 'Great workshop! Learned a lot.',
-            date: '2024-02-15'
-        }
-    ];
-
     useEffect(() => {
-        // Simulate loading data
-        const t = setTimeout(() => {
-            setEvents(sampleEvents);
-            setFeedbacks(sampleFeedbacks);
+        const fetchData = async () => {
+            try {
+                const [eventsResponse, feedbacksResponse] = await Promise.all([
+                    fetch('http://127.0.0.1:5000/events'),
+                    fetch('http://127.0.0.1:5000/feedbacks')
+                ]);
+
+                if (eventsResponse.ok) {
+                    const eventsData = await eventsResponse.json();
+                    setEvents(eventsData);
+                }
+
+                if (feedbacksResponse.ok) {
+                    const feedbacksData = await feedbacksResponse.json();
+                    setFeedbacks(feedbacksData);
+                }
+            } catch (err) {
+                console.log('Error loading data');
+            }
             setLoading(false);
-        }, 1000);
-        return () => clearTimeout(t);
+        };
+
+        fetchData();
     }, []);
 
-    const handleCreateEvent = (e) => {
+    const handleCreateEvent = async (e) => {
         e.preventDefault();
-        const event = { id: Date.now(), ...newEvent };
-        setEvents((prev) => [...prev, event]);
-        setNewEvent({ title: '', date: '', venue: '', description: '' });
-        setShowEventForm(false);
+        try {
+            const response = await fetch('http://127.0.0.1:5000/events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newEvent)
+            });
+
+            if (response.ok) {
+                const createdEvent = await response.json();
+                setEvents([...events, createdEvent]);
+                setNewEvent({ title: '', date: '', venue: '', description: '' });
+                setShowEventForm(false);
+            }
+        } catch (err) {
+            console.log('Error creating event');
+        }
     };
 
-    const handleDeleteEvent = (eventId) => {
-        if (window.confirm('Are you sure you want to delete this event?')) {
-            setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
+    const handleDeleteEvent = async (eventId) => {
+        if (!window.confirm('Are you sure you want to delete this event?')) return;
+
+        try {
+            const response = await fetch(`http://127.0.0.1:5000/events/${eventId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setEvents(events.filter(event => event.id !== eventId));
+            }
+        } catch (err) {
+            console.log('Error deleting event');
         }
     };
 
@@ -66,13 +85,11 @@ function AdminPage() {
             <h1>Admin Dashboard</h1>
 
             <div className="admin-sections">
-                {/* Events Management */}
                 <section className="admin-section">
                     <div className="section-header">
                         <h2>Manage Events</h2>
                         <button
-                            type="button"
-                            onClick={() => setShowEventForm((s) => !s)}
+                            onClick={() => setShowEventForm(!showEventForm)}
                             className="btn-primary"
                         >
                             {showEventForm ? 'Cancel' : 'Add New Event'}
@@ -81,50 +98,41 @@ function AdminPage() {
 
                     {showEventForm && (
                         <form onSubmit={handleCreateEvent} className="event-form">
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label htmlFor="event-title">Event Title:</label>
-                                    <input
-                                        id="event-title"
-                                        type="text"
-                                        value={newEvent.title}
-                                        onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label htmlFor="event-date">Date:</label>
-                                    <input
-                                        id="event-date"
-                                        type="date"
-                                        value={newEvent.date}
-                                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
                             <div className="form-group">
-                                <label htmlFor="event-venue">Venue:</label>
+                                <label>Event Title:</label>
                                 <input
-                                    id="event-venue"
+                                    type="text"
+                                    value={newEvent.title}
+                                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Date:</label>
+                                <input
+                                    type="date"
+                                    value={newEvent.date}
+                                    onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Venue:</label>
+                                <input
                                     type="text"
                                     value={newEvent.venue}
                                     onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })}
                                     required
                                 />
                             </div>
-
                             <div className="form-group">
-                                <label htmlFor="event-description">Description:</label>
+                                <label>Description:</label>
                                 <textarea
-                                    id="event-description"
                                     value={newEvent.description}
                                     onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
                                     required
                                 />
                             </div>
-
                             <button type="submit" className="submit-btn">
                                 Create Event
                             </button>
@@ -136,16 +144,11 @@ function AdminPage() {
                             <div key={event.id} className="event-item">
                                 <div className="event-info">
                                     <h4>{event.title}</h4>
-                                    <p>
-                                        <strong>Date:</strong> {event.date}
-                                    </p>
-                                    <p>
-                                        <strong>Venue:</strong> {event.venue}
-                                    </p>
+                                    <p><strong>Date:</strong> {event.date}</p>
+                                    <p><strong>Venue:</strong> {event.venue}</p>
                                     <p>{event.description}</p>
                                 </div>
                                 <button
-                                    type="button"
                                     onClick={() => handleDeleteEvent(event.id)}
                                     className="delete-btn"
                                 >
@@ -156,10 +159,8 @@ function AdminPage() {
                     </div>
                 </section>
 
-                {/* Feedback Management */}
                 <section className="admin-section">
                     <h2>All Feedback</h2>
-
                     <div className="feedback-list">
                         {feedbacks.length > 0 ? (
                             feedbacks.map((feedback) => (
@@ -168,12 +169,8 @@ function AdminPage() {
                                         <strong>{feedback.userName}</strong>
                                         <span>Rating: {feedback.rating} ⭐</span>
                                     </div>
-                                    <p>
-                                        <strong>Event:</strong> {feedback.eventTitle}
-                                    </p>
-                                    <p>
-                                        <strong>Comment:</strong> {feedback.comment}
-                                    </p>
+                                    <p><strong>Event:</strong> {feedback.eventTitle}</p>
+                                    <p><strong>Comment:</strong> {feedback.comment}</p>
                                     <small>Submitted on: {feedback.date}</small>
                                 </div>
                             ))

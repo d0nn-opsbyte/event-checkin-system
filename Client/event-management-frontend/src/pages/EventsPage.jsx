@@ -1,92 +1,96 @@
 import { useState, useEffect } from 'react';
 import EventCard from '../components/EventCard';
 
-const sampleEvents = [
-    {
-        id: 1,
-        title: 'React Fundamentals Workshop',
-        date: '2024-02-15',
-        venue: 'Conference Room A',
-        description: 'Learn the basics of React development',
-    },
-    {
-        id: 2,
-        title: 'Team Leadership Training',
-        date: '2024-02-20',
-        venue: 'Main Auditorium',
-        description: 'Develop leadership skills for team management',
-    },
-    {
-        id: 3,
-        title: 'Project Management Basics',
-        date: '2024-03-01',
-        venue: 'Training Room B',
-        description: 'Introduction to project management methodologies',
-    },
-];
-
-export default function EventsPage({ user }) {
+function EventsPage({ user }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        let mounted = true;
-
-        const fetchEvents = async () => {
+        const getEvents = async () => {
             try {
-                setLoading(true);
-                // simulate network latency
-                setTimeout(() => {
-                    if (!mounted) return;
-                    setEvents(sampleEvents);
-                    setLoading(false);
-                }, 1000);
+                const response = await fetch('http://127.0.0.1:5000/api/events');
+                if (response.ok) {
+                    const data = await response.json();
+                    setEvents(data);
+                } else {
+                    setError('Failed to load events');
+                }
             } catch (err) {
-                if (!mounted) return;
-                setError('Failed to load events');
-                setLoading(false);
+                setError('Cannot connect to server');
             }
+            setLoading(false);
         };
 
-        fetchEvents();
-        return () => {
-            mounted = false;
-        };
+        getEvents();
     }, []);
 
-    const handleEventRegister = (eventId) => {
-        console.log(`Registered for event ${eventId}`);
+    const handleRegister = async (eventId) => {
+        if (!user) {
+            alert('Please login to register for events');
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://127.0.0.1:5000/api/events/${eventId}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify({
+                    userId: user.id
+                })
+            });
+
+            if (response.ok) {
+                const updatedEvent = await response.json();
+                setEvents(events.map(event => 
+                    event.id === updatedEvent.id ? updatedEvent : event
+                ));
+                alert('Successfully registered for event!');
+            } else {
+                alert('Registration failed');
+            }
+        } catch (err) {
+            alert('Error registering for event');
+        }
     };
 
-    if (loading) return <div className="loading">Loading events...</div>;
-    if (error) return <div className="error-message">{error}</div>;
+    if (loading) {
+        return <div className="loading">Loading events...</div>;
+    }
+
+    if (error) {
+        return <div className="error-message">{error}</div>;
+    }
 
     return (
         <div className="events-page">
-            <div className="page-header">
-                <h1>Upcoming Training Events</h1>
-                {!user && (
-                    <p className="login-prompt">
-                        Please <a href="/login">login</a> to register for events
-                    </p>
-                )}
-            </div>
+            <h1>Upcoming Training Events</h1>
+            
+            {!user && (
+                <p className="login-prompt">
+                    Please <a href="/login">login</a> to register for events
+                </p>
+            )}
 
             <div className="events-grid">
                 {events.length > 0 ? (
-                    events.map((event) => (
+                    events.map(event => (
                         <EventCard
                             key={event.id}
                             event={event}
                             user={user}
-                            onRegister={handleEventRegister}
+                            onRegister={handleRegister}
                         />
                     ))
                 ) : (
-                    <p>No upcoming events found.</p>
+                    <p>No events found</p>
                 )}
             </div>
         </div>
     );
 }
+
+export default EventsPage;

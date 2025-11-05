@@ -2,19 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 function LoginPage({ login }) {
-    const [formData, setFormData] = useState({
-        email: '',
-        password: ''
-    });
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -22,80 +13,82 @@ function LoginPage({ login }) {
         setError('');
 
         try {
-            setTimeout(() => {
-                if (formData.email === 'admin@company.com' && formData.password === 'admin123') {
-                    const userData = {
-                        id: 1,
-                        name: 'Admin User',
-                        email: formData.email,
-                        role: 'admin'
-                    };
-                    login(userData, 'fake-jwt-token-admin');
-                } else if (formData.email && formData.password) {
-                    const userData = {
-                        id: 2,
-                        name: 'Employee User',
-                        email: formData.email,
-                        role: 'employee'
-                    };
-                    login(userData, 'fake-jwt-token-employee');
+            const response = await fetch('http://127.0.0.1:5000/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                const token = result.token;
+                const user = result.user;
+                
+                if (user && token) {
+                    login(user, token);
                 } else {
-                    setError('Invalid email or password');
+                    setError('Invalid response from server');
                 }
-                setLoading(false);
-            }, 1000);
+            } else {
+                setError(result.message || 'Login failed');
+            }
 
         } catch (err) {
-            setError('Login failed. Please try again.');
-            setLoading(false);
+            setError('Cannot connect to server');
         }
+
+        setLoading(false);
     };
 
     return (
-        <div className="auth-container">
-            <div className="auth-form">
-                <h2>Login to Your Account</h2>
-
-                {error && <div className="error-message">{error}</div>}
-
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label>Email:</label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Password:</label>
-                        <input
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <button type="submit" disabled={loading} className="submit-btn">
-                        {loading ? 'Logging in...' : 'Login'}
-                    </button>
-                </form>
-
-                <p className="auth-link">
-                    Don't have an account? <Link to="/register">Register here</Link>
-                </p>
-
-                <div className="demo-accounts">
-                    <h4>Demo Accounts:</h4>
-                    <p><strong>Admin:</strong> admin@company.com / admin123</p>
-                    <p><strong>Employee:</strong> any email/password</p>
+        <div className="login-container">
+            <h2>Login to Your Account</h2>
+            
+            {error && (
+                <div className="error-message">
+                    {error}
                 </div>
-            </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                    <label>Email:</label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label>Password:</label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                </div>
+
+                <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="submit-btn"
+                >
+                    {loading ? 'Logging in...' : 'Login'}
+                </button>
+            </form>
+
+            <p className="register-link">
+                Don't have an account? <Link to="/register">Register here</Link>
+            </p>
         </div>
     );
 }
