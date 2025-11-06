@@ -1,4 +1,4 @@
-from flask import request, jsonify  
+from flask import app, request, jsonify  
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from models import db, User, Event, Feedback, Registration
 from datetime import datetime
@@ -85,71 +85,60 @@ def init_routes(app):
         db.session.commit()
         return jsonify({"message":"Event deleted"}), 200
 
-   
+
     @app.route('/events/<int:event_id>/feedback', methods=['POST', 'OPTIONS'])
     @jwt_required()
     def submit_feedback(event_id):
         if request.method == 'OPTIONS':
             return '', 200
-            
-        try:
-            
-            identity = get_jwt_identity()
-            data = request.get_json() or {}
-            
-            print("📨 Received feedback data:", data)
-            
-            
-            if identity.get("role") != "employee":
-                return jsonify({"error": "Only employees can submit feedback"}), 403
-            
-           
-            rating = data.get("rating")
-            if rating is None:
-                return jsonify({"error": "Rating is required"}), 422
-            
-            try:
-                rating = int(rating)
-                if rating < 1 or rating > 5:
-                    return jsonify({"error": "Rating must be between 1 and 5"}), 422
-            except (ValueError, TypeError):
-                return jsonify({"error": "Rating must be a number"}), 422
-            
-            
-            comment_text = data.get("comment", "") or data.get("comments", "")
-            if comment_text is None:
-                comment_text = ""
-            
-            
-            event = Event.query.get(event_id)
-            if not event:
-                return jsonify({"error": "Event not found"}), 404
-            
-            
-            existing = Feedback.query.filter_by(
-                user_id=identity["id"], 
-                event_id=event_id
-            ).first()
-            if existing:
-                return jsonify({"error": "You already submitted feedback for this event"}), 400
-            
-           
-            fb = Feedback(
-                user_id=identity["id"], 
-                event_id=event_id, 
-                rating=rating, 
-                comments=str(comment_text)  
-            )
-            
-            db.session.add(fb)
-            db.session.commit()
-            
-            return jsonify({"message": "Feedback saved successfully!"}), 201
-            
-        except Exception as e:
-            print("Error saving feedback:", str(e))
-            db.session.rollback()
-            return jsonify({"error": "Server error saving feedback"}), 500
+
+        data = request.get_json() or {}
+        print("📨 Got data from frontend:", data)
+
+
+        current_user = get_jwt_identity()
+        user_id = current_user["id"]
+        user_role = current_user["role"]
+
+
+        if user_role != "employee":
+            return jsonify({"error": "Only employees can submit feedback"}), 403
+
+
+        if "rating" not in data:
+            return jsonify({"error": "Rating is required"}), 422
+
+        rating = data["rating"]
+
+
+        if not isinstance(rating, int):
+            return jsonify({"error": "Rating must be a number"}), 422
+
+        if rating < 1 or rating > 5:
+            return jsonify({"error": "Rating must be between 1 and 5"}), 422
+
+
+        comment_text = data.get("comment", "")
+
+
+        event = Event.query.get(event_id)
+        if not event:
+            return jsonify({"error": "Event not found"}), 404
+
+
+        new_feedback = Feedback(
+            user_id=user_id,
+            event_id=event_id,
+            rating=rating,
+            comments=comment_text
+        )
+
+
+        db.session.add(new_feedback)
+        db.session.commit()
+
+        print("✅ Feedback saved successfully!")
+        return jsonify({"message": "Thank you for your feedback!"}), 201
 
     @app.route('/events/<int:event_id>/register', methods=['POST', 'OPTIONS'])
     @jwt_required()

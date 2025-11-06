@@ -29,10 +29,12 @@ function FeedbackPage({ user }) {
         getEvents();
     }, [API_URL]);
 
-    const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
+    
+   
     if (!selectedEvent || !rating) {
-        setMessage('Please select an event and provide a rating');
+        setMessage('Please select an event and give a rating');
         return;
     }
 
@@ -40,43 +42,48 @@ function FeedbackPage({ user }) {
     setMessage('');
 
     try {
+        
         const token = localStorage.getItem('token');
         
         
-        const feedbackData = {
-            rating: Number(rating),
-            comment: String(comment || '')
+        const dataToSend = {
+            rating: rating,
+            comment: comment
         };
 
-        console.log('Sending feedback:', feedbackData);
+        console.log('Sending to server:', dataToSend);
 
+      
         const response = await fetch(`${API_URL}/events/${selectedEvent}/feedback`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(feedbackData)
+            body: JSON.stringify(dataToSend)
         });
 
+       
         const result = await response.json();
-        console.log('Server response:', result);
+        console.log('Server said:', result);
 
+        
         if (response.ok) {
             setMessage('✅ Feedback submitted successfully!');
+            
             setSelectedEvent('');
             setRating(0);
             setComment('');
         } else {
-            setMessage(`❌ ${result.error || result.msg || 'Failed to submit feedback'}`);
+            
+            setMessage('❌ ' + (result.error || 'Something went wrong'));
         }
     } catch (err) {
-        console.error('Error:', err);
-        setMessage('❌ Network error. Please try again.');
+        setMessage('❌ Cannot connect to server');
     }
     
     setLoading(false);
-};
+};    
 
     return (
         <div className="feedback-page">
