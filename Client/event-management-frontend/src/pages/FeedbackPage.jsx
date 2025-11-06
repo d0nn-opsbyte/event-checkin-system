@@ -42,11 +42,11 @@ const handleSubmit = async (e) => {
     try {
         const token = localStorage.getItem('token');
         
-        // Add the missing "subject" field
+        
         const feedbackData = {
             rating: rating,
             comment: comment,
-            subject: "Event Feedback"  // ← ADD THIS LINE
+            subject: "Event Feedback"
         };
 
         console.log('Sending:', feedbackData);
