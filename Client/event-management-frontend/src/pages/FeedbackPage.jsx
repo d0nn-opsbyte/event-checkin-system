@@ -9,7 +9,6 @@ function FeedbackPage({ user }) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
-    // Use environment variable for API URL
     const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000';
 
     useEffect(() => {
@@ -42,6 +41,9 @@ function FeedbackPage({ user }) {
 
         try {
             const token = localStorage.getItem('token');
+            console.log('Submitting feedback to:', `${API_URL}/events/${selectedEvent}/feedback`);
+            console.log('Payload:', { rating, comment });
+            
             const response = await fetch(`${API_URL}/events/${selectedEvent}/feedback`, {
                 method: 'POST',
                 headers: {
@@ -50,11 +52,13 @@ function FeedbackPage({ user }) {
                 },
                 body: JSON.stringify({
                     rating: rating,
-                    comments: comment  
+                    comment: comment  
                 })
             });
 
             const result = await response.json();
+            console.log('Response status:', response.status);
+            console.log('Response data:', result);
 
             if (response.ok) {
                 setMessage('✅ Feedback submitted successfully!');
@@ -62,10 +66,11 @@ function FeedbackPage({ user }) {
                 setRating(0);
                 setComment('');
             } else {
-                setMessage('❌ Failed to submit feedback: ' + (result.error || 'Unknown error'));
+                setMessage(`❌ Failed to submit feedback: ${result.message || result.error || 'Unknown error'}`);
             }
         } catch (err) {
-            setMessage('❌ Error submitting feedback');
+            console.error('Submission error:', err);
+            setMessage('❌ Network error submitting feedback. Check console for details.');
         }
         setLoading(false);
     };
