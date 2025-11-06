@@ -29,10 +29,8 @@ function FeedbackPage({ user }) {
         getEvents();
     }, [API_URL]);
 
-const handleSubmit = async (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic check
     if (!selectedEvent || !rating) {
         setMessage('Please select an event and provide a rating');
         return;
@@ -44,13 +42,13 @@ const handleSubmit = async (e) => {
     try {
         const token = localStorage.getItem('token');
         
-        // Prepare the data to send
+        
         const feedbackData = {
-            rating: rating,      // This should be a number 1-5
-            comment: comment     // This should be text
+            rating: Number(rating),
+            comment: String(comment || '')
         };
 
-        console.log('Sending:', feedbackData);
+        console.log('Sending feedback:', feedbackData);
 
         const response = await fetch(`${API_URL}/events/${selectedEvent}/feedback`, {
             method: 'POST',
@@ -62,23 +60,23 @@ const handleSubmit = async (e) => {
         });
 
         const result = await response.json();
+        console.log('Server response:', result);
 
         if (response.ok) {
             setMessage('✅ Feedback submitted successfully!');
-            
             setSelectedEvent('');
             setRating(0);
             setComment('');
         } else {
-            
-            setMessage(`❌ ${result.error || 'Failed to submit feedback'}`);
+            setMessage(`❌ ${result.error || result.msg || 'Failed to submit feedback'}`);
         }
     } catch (err) {
-        setMessage('❌ Network error. Please check your connection.');
+        console.error('Error:', err);
+        setMessage('❌ Network error. Please try again.');
     }
     
     setLoading(false);
-};    
+};
 
     return (
         <div className="feedback-page">

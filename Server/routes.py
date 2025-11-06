@@ -100,28 +100,45 @@ def init_routes(app):
             print("📨 Received feedback data:", data)
             
             
+            if identity.get("role") != "employee":
+                return jsonify({"error": "Only employees can submit feedback"}), 403
+            
+           
             rating = data.get("rating")
             if rating is None:
-                return jsonify({"error": "Please provide a rating"}), 422
+                return jsonify({"error": "Rating is required"}), 422
             
-            rating = int(rating) 
-            if rating < 1 or rating > 5:
-                return jsonify({"error": "Rating must be between 1 and 5"}), 422
+            try:
+                rating = int(rating)
+                if rating < 1 or rating > 5:
+                    return jsonify({"error": "Rating must be between 1 and 5"}), 422
+            except (ValueError, TypeError):
+                return jsonify({"error": "Rating must be a number"}), 422
             
             
             comment_text = data.get("comment", "") or data.get("comments", "")
+            if comment_text is None:
+                comment_text = ""
             
-           
+            
             event = Event.query.get(event_id)
             if not event:
                 return jsonify({"error": "Event not found"}), 404
+            
+            
+            existing = Feedback.query.filter_by(
+                user_id=identity["id"], 
+                event_id=event_id
+            ).first()
+            if existing:
+                return jsonify({"error": "You already submitted feedback for this event"}), 400
             
            
             fb = Feedback(
                 user_id=identity["id"], 
                 event_id=event_id, 
                 rating=rating, 
-                comments=comment_text
+                comments=str(comment_text)  
             )
             
             db.session.add(fb)
@@ -130,8 +147,9 @@ def init_routes(app):
             return jsonify({"message": "Feedback saved successfully!"}), 201
             
         except Exception as e:
-            print("Error:", str(e))
-            return jsonify({"error": "Something went wrong"}), 500
+            print("Error saving feedback:", str(e))
+            db.session.rollback()
+            return jsonify({"error": "Server error saving feedback"}), 500
 
     @app.route('/events/<int:event_id>/register', methods=['POST', 'OPTIONS'])
     @jwt_required()
