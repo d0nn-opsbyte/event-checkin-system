@@ -13,103 +13,110 @@ function AdminPage({ user }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-   useEffect(() => {
-    const fetchData = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            
-            const [eventsResponse, feedbacksResponse] = await Promise.all([
-                fetch('http://127.0.0.1:5000/events'),
-                fetch('http://127.0.0.1:5000/feedback', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-            ]);
+    // Use environment variable for API URL
+    const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000';
 
-            if (eventsResponse.ok) {
-                const eventsData = await eventsResponse.json();
-                setEvents(eventsData);
-            }
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                
+                const [eventsResponse, feedbacksResponse] = await Promise.all([
+                    fetch(`${API_URL}/events`),
+                    fetch(`${API_URL}/feedback`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                ]);
 
-            if (feedbacksResponse.ok) {
-                const feedbacksData = await feedbacksResponse.json();
-                setFeedbacks(feedbacksData);
-            } else if (feedbacksResponse.status === 401) {
-                // Token expired - use the demo route as fallback
-                const demoResponse = await fetch('http://127.0.0.1:5000/admin/feedback-demo');
-                if (demoResponse.ok) {
-                    const demoData = await demoResponse.json();
-                    setFeedbacks(demoData);
-                } else {
-                    setError('Please log in again to view feedback');
+                if (eventsResponse.ok) {
+                    const eventsData = await eventsResponse.json();
+                    setEvents(eventsData);
                 }
+
+                if (feedbacksResponse.ok) {
+                    const feedbacksData = await feedbacksResponse.json();
+                    setFeedbacks(feedbacksData);
+                } else if (feedbacksResponse.status === 401) {
+                    // Token expired - use demo route as fallback
+                    const demoResponse = await fetch(`${API_URL}/admin/feedback-demo`);
+                    if (demoResponse.ok) {
+                        const demoData = await demoResponse.json();
+                        setFeedbacks(demoData);
+                    } else {
+                        setError('Please log in again to view feedback');
+                    }
+                } else {
+                    setError('Failed to load feedback');
+                }
+            } catch (err) {
+                console.log('Error loading data:', err);
+                setError('Cannot connect to server');
+            }
+            setLoading(false);
+        };
+
+        fetchData();
+    }, [API_URL]);
+
+    const handleCreateEvent = async (e) => {
+        e.preventDefault();
+        try {
+            console.log('Creating event with:', newEvent);
+            
+            const response = await fetch(`${API_URL}/admin/events`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                // Add token for production if needed
+                    // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(newEvent)
+            });
+
+            console.log('Response status:', response.status);
+            
+            const result = await response.json();
+            console.log('Server response:', result);
+
+            if (response.ok) {
+                setEvents([...events, result.event]);
+                setNewEvent({ title: '', date: '', venue: '', description: '' });
+                setShowEventForm(false);
+                alert('Event created successfully!');
             } else {
-                setError('Failed to load feedback');
+                alert('Failed to create event: ' + (result.error || 'Unknown error'));
             }
         } catch (err) {
-            console.log('Error loading data:', err);
-            setError('Cannot connect to server');
+            console.error('Error creating event:', err);
+            alert('Error creating event: ' + err.message);
         }
-        setLoading(false);
     };
 
-    fetchData();
-}, []);
+    const handleDeleteEvent = async (eventId) => {
+        if (!window.confirm('Are you sure you want to delete this event?')) return;
 
-const handleCreateEvent = async (e) => {
-    e.preventDefault();
-    try {
-        console.log('Creating event with:', newEvent);
-        
-        
-        const response = await fetch('http://127.0.0.1:5000/admin/events', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(newEvent)
-        });
+        try {
+            const response = await fetch(`${API_URL}/admin/events/${eventId}`, {
+                method: 'DELETE'
+            });
 
-        console.log('Response status:', response.status);
-        
-        const result = await response.json();
-        console.log('Server response:', result);
-
-        if (response.ok) {
-            setEvents([...events, result.event]);
-            setNewEvent({ title: '', date: '', venue: '', description: '' });
-            setShowEventForm(false);
-            alert('Event created successfully!');
-        } else {
-            alert('Failed to create event: ' + (result.error || 'Unknown error'));
+            if (response.ok) {
+                setEvents(events.filter(event => event.id !== eventId));
+                alert('Event deleted successfully!');
+            } else {
+                const errorData = await response.json();
+                alert('Failed to delete event: ' + (errorData.error || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Error deleting event: ' + err.message);
         }
-    } catch (err) {
-        console.error('Error creating event:', err);
-        alert('Error creating event: ' + err.message);
+    };
+
+    if (loading) {
+        return <div className="loading">Loading admin panel...</div>;
     }
-};
-
-const handleDeleteEvent = async (eventId) => {
-    if (!window.confirm('Are you sure you want to delete this event?')) return;
-
-    try {
-      
-        const response = await fetch(`http://127.0.0.1:5000/admin/events/${eventId}`, {
-            method: 'DELETE'
-        });
-
-        if (response.ok) {
-            setEvents(events.filter(event => event.id !== eventId));
-            alert('Event deleted successfully!');
-        } else {
-            const errorData = await response.json();
-            alert('Failed to delete event: ' + (errorData.error || 'Unknown error'));
-        }
-    } catch (err) {
-        alert('Error deleting event: ' + err.message);
-    }
-};    
 
     return (
         <div className="admin-page">
@@ -212,11 +219,11 @@ const handleDeleteEvent = async (eventId) => {
                             feedbacks.map((feedback) => (
                                 <div key={feedback.id} className="feedback-item">
                                     <div className="feedback-header">
-                                        <strong>User #{feedback.user_id}</strong>
+                                        <strong>{feedback.user_name || `User #${feedback.user_id}`}</strong>
                                         <span className="rating">Rating: {feedback.rating} ⭐</span>
                                     </div>
-                                    <p><strong>Event ID:</strong> {feedback.event_id}</p>
-                                    <p><strong>Comment:</strong> {feedback.comment || "No comment provided"}</p>
+                                    <p><strong>Event:</strong> {feedback.event_title || `Event #${feedback.event_id}`}</p>
+                                    <p><strong>Comment:</strong> {feedback.comments || feedback.comment || "No comment provided"}</p>
                                 </div>
                             ))
                         ) : (

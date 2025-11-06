@@ -7,13 +7,16 @@ function LoginPage({ login }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    
+    const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000';
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/login', {
+            const response = await fetch(`${API_URL}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -30,7 +33,6 @@ function LoginPage({ login }) {
             console.log('Server response:', result); 
 
             if (response.ok) {
-                
                 const user = {
                     name: result.name,
                     email: email, 

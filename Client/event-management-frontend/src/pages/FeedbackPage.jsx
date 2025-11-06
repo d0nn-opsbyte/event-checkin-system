@@ -9,10 +9,13 @@ function FeedbackPage({ user }) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
+    // Use environment variable for API URL
+    const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000';
+
     useEffect(() => {
         const getEvents = async () => {
             try {
-                const response = await fetch('http://127.0.0.1:5000/events');
+                const response = await fetch(`${API_URL}/events`);
                 if (response.ok) {
                     const data = await response.json();
                     setEvents(data);
@@ -25,47 +28,47 @@ function FeedbackPage({ user }) {
         };
 
         getEvents();
-    }, []);
+    }, [API_URL]);
 
-   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedEvent || !rating) {
-        setMessage('Please select an event and provide a rating');
-        return;
-    }
-
-    setLoading(true);
-    setMessage('');
-
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`http://127.0.0.1:5000/events/${selectedEvent}/feedback`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                rating: rating,
-                comments: comment  
-            })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            setMessage('✅ Feedback submitted successfully!');
-            setSelectedEvent('');
-            setRating(0);
-            setComment('');
-        } else {
-            setMessage('❌ Failed to submit feedback: ' + (result.error || 'Unknown error'));
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!selectedEvent || !rating) {
+            setMessage('Please select an event and provide a rating');
+            return;
         }
-    } catch (err) {
-        setMessage('❌ Error submitting feedback');
-    }
-    setLoading(false);
-};
+
+        setLoading(true);
+        setMessage('');
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/events/${selectedEvent}/feedback`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    rating: rating,
+                    comments: comment  
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setMessage('✅ Feedback submitted successfully!');
+                setSelectedEvent('');
+                setRating(0);
+                setComment('');
+            } else {
+                setMessage('❌ Failed to submit feedback: ' + (result.error || 'Unknown error'));
+            }
+        } catch (err) {
+            setMessage('❌ Error submitting feedback');
+        }
+        setLoading(false);
+    };
 
     return (
         <div className="feedback-page">
@@ -133,7 +136,6 @@ function FeedbackPage({ user }) {
                     {loading ? 'Submitting...' : 'Submit Feedback'}
                 </button>
             </form>
-
         </div>
     );
 }

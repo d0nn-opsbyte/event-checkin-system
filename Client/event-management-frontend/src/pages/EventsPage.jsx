@@ -6,10 +6,13 @@ function EventsPage({ user }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    
+    const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000';
+
     useEffect(() => {
         const getEvents = async () => {
             try {
-                const response = await fetch('http://127.0.0.1:5000/events');
+                const response = await fetch(`${API_URL}/events`);
                 if (response.ok) {
                     const data = await response.json();
                     setEvents(data);
@@ -17,7 +20,6 @@ function EventsPage({ user }) {
                     setError('Failed to load events');
                 }
             } catch (err) {
-            
                 setError(err.message || 'Failed to load events');
             } finally {
                 setLoading(false);
@@ -25,7 +27,7 @@ function EventsPage({ user }) {
         };
 
         getEvents();
-    }, []);
+    }, [API_URL]);
 
     if (loading) {
         return <div className="loading">Loading events...</div>;
