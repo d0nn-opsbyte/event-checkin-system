@@ -92,24 +92,46 @@ def init_routes(app):
         if request.method == 'OPTIONS':
             return '', 200
             
-        identity = get_jwt_identity()
-        data = request.get_json() or {}
-        rating = data.get("rating")
-        if rating is None:
-            return jsonify({"error":"Rating required"}), 400
-        if not Event.query.get(event_id):
-            return jsonify({"error":"Event not found"}), 404
-        
-        
-        fb = Feedback(
-            user_id=identity["id"], 
-            event_id=event_id, 
-            rating=int(rating), 
-            comment=data.get("comment","") 
-        )
-        db.session.add(fb)
-        db.session.commit()
-        return jsonify({"message":"Feedback saved"}), 201
+        try:
+            
+            identity = get_jwt_identity()
+            data = request.get_json() or {}
+            
+            print("📨 Received feedback data:", data)
+            
+            
+            rating = data.get("rating")
+            if rating is None:
+                return jsonify({"error": "Please provide a rating"}), 422
+            
+            rating = int(rating) 
+            if rating < 1 or rating > 5:
+                return jsonify({"error": "Rating must be between 1 and 5"}), 422
+            
+            
+            comment_text = data.get("comment", "") or data.get("comments", "")
+            
+           
+            event = Event.query.get(event_id)
+            if not event:
+                return jsonify({"error": "Event not found"}), 404
+            
+           
+            fb = Feedback(
+                user_id=identity["id"], 
+                event_id=event_id, 
+                rating=rating, 
+                comments=comment_text
+            )
+            
+            db.session.add(fb)
+            db.session.commit()
+            
+            return jsonify({"message": "Feedback saved successfully!"}), 201
+            
+        except Exception as e:
+            print("Error:", str(e))
+            return jsonify({"error": "Something went wrong"}), 500
 
     @app.route('/events/<int:event_id>/register', methods=['POST', 'OPTIONS'])
     @jwt_required()
