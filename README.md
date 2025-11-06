@@ -89,9 +89,11 @@ event-check-in-system/
 
 -**Development URLs:**
 
--**Frontend**:
--**Backend**:
--**Database**:
+-**Frontend**:(https://event-checkin-system.vercel.app)
+
+-**Backend**:(https://event-checkin-system-2.onrender.com)
+
+
 
 ## Default Credentials
 
