@@ -41,24 +41,44 @@ function FeedbackPage({ user }) {
 
         try {
             const token = localStorage.getItem('token');
-            console.log('Submitting feedback to:', `${API_URL}/events/${selectedEvent}/feedback`);
-            console.log('Payload:', { rating, comment });
             
+            // Enhanced debugging
+            console.log('=== FEEDBACK SUBMISSION DEBUG ===');
+            console.log('URL:', `${API_URL}/events/${selectedEvent}/feedback`);
+            console.log('Event ID (type):', selectedEvent, typeof selectedEvent);
+            console.log('Rating (type):', rating, typeof rating);
+            console.log('Comment (type):', comment, typeof comment);
+            
+            // Ensure rating is a number (not string)
+            const payload = {
+                rating: Number(rating),  // ✅ Explicitly convert to number
+                comment: comment || ''   // ✅ Ensure comment is always a string
+            };
+            
+            console.log('Final payload:', payload);
+
             const response = await fetch(`${API_URL}/events/${selectedEvent}/feedback`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    rating: rating,
-                    comment: comment  
-                })
+                body: JSON.stringify(payload)
             });
 
-            const result = await response.json();
             console.log('Response status:', response.status);
-            console.log('Response data:', result);
+            
+            // Handle cases where response might not be JSON
+            let result;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                result = await response.json();
+            } else {
+                const text = await response.text();
+                result = { message: text || 'Non-JSON response' };
+            }
+            
+            console.log('Full response:', result);
 
             if (response.ok) {
                 setMessage('✅ Feedback submitted successfully!');
@@ -66,11 +86,22 @@ function FeedbackPage({ user }) {
                 setRating(0);
                 setComment('');
             } else {
-                setMessage(`❌ Failed to submit feedback: ${result.message || result.error || 'Unknown error'}`);
+                // More detailed error messages
+                if (response.status === 422) {
+                    setMessage(`❌ Validation Error: ${result.message || 'Check rating (1-5) and data types'}`);
+                } else if (response.status === 401) {
+                    setMessage('❌ Authentication failed. Please log in again.');
+                } else if (response.status === 403) {
+                    setMessage('❌ Only employees can submit feedback.');
+                } else if (response.status === 404) {
+                    setMessage('❌ Event not found.');
+                } else {
+                    setMessage(`❌ Server error (${response.status}): ${result.message || result.error || 'Please try again'}`);
+                }
             }
         } catch (err) {
-            console.error('Submission error:', err);
-            setMessage('❌ Network error submitting feedback. Check console for details.');
+            console.error('Network error:', err);
+            setMessage('❌ Network error. Check console and ensure backend is running.');
         }
         setLoading(false);
     };

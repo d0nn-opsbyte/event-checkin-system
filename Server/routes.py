@@ -105,7 +105,7 @@ def init_routes(app):
             user_id=identity["id"], 
             event_id=event_id, 
             rating=int(rating), 
-            comments=data.get("comments","") 
+            comment=data.get("comment","") 
         )
         db.session.add(fb)
         db.session.commit()
