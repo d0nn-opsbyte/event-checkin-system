@@ -31,10 +31,8 @@ function FeedbackPage({ user }) {
 
 const handleSubmit = async (e) => {
     e.preventDefault();
-    
-   
     if (!selectedEvent || !rating) {
-        setMessage('Please select an event and give a rating');
+        setMessage('Please select an event and provide a rating');
         return;
     }
 
@@ -42,48 +40,43 @@ const handleSubmit = async (e) => {
     setMessage('');
 
     try {
-        
         const token = localStorage.getItem('token');
         
-        
-        const dataToSend = {
+        // Add the missing "subject" field
+        const feedbackData = {
             rating: rating,
-            comment: comment
+            comment: comment,
+            subject: "Event Feedback"  // ← ADD THIS LINE
         };
 
-        console.log('Sending to server:', dataToSend);
+        console.log('Sending:', feedbackData);
 
-      
         const response = await fetch(`${API_URL}/events/${selectedEvent}/feedback`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(dataToSend)
+            body: JSON.stringify(feedbackData)
         });
 
-       
         const result = await response.json();
-        console.log('Server said:', result);
+        console.log('Server response:', result);
 
-        
         if (response.ok) {
             setMessage('✅ Feedback submitted successfully!');
-            
             setSelectedEvent('');
             setRating(0);
             setComment('');
         } else {
-            
-            setMessage('❌ ' + (result.error || 'Something went wrong'));
+            setMessage(`❌ ${result.msg || result.error || 'Failed to submit feedback'}`);
         }
     } catch (err) {
-        setMessage('❌ Cannot connect to server');
+        setMessage('❌ Network error. Please try again.');
     }
     
     setLoading(false);
-};    
+};
 
     return (
         <div className="feedback-page">
