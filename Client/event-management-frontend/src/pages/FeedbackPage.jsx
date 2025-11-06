@@ -45,8 +45,7 @@ const handleSubmit = async (e) => {
         
         const feedbackData = {
             rating: rating,
-            comment: comment,
-            subject: "Event Feedback"
+            comment: comment
         };
 
         console.log('Sending:', feedbackData);

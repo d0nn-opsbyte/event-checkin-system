@@ -91,34 +91,30 @@ def init_routes(app):
     def submit_feedback(event_id):
         if request.method == 'OPTIONS':
             return '', 200
-            
-        try:
-            data = request.get_json()
-            identity = get_jwt_identity()
-            
-          
-            rating = data.get("rating")
-            comment = data.get("comment", "")
-            
-            
-            if not rating:
-                return jsonify({"error": "Rating required"}), 422
-                
-            
-            fb = Feedback(
-                user_id=identity["id"],
-                event_id=event_id,
-                rating=rating,
-                comments=comment
-            )
-            
-            db.session.add(fb)
-            db.session.commit()
-            
-            return jsonify({"message": "Feedback saved!"}), 201
-            
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+        
+        data = request.get_json()
+        identity = get_jwt_identity()
+        
+       
+        rating = data.get("rating")
+        comment = data.get("comment", "")
+        
+      
+        if not rating:
+            return jsonify({"error": "Rating required"}), 422
+     
+ 
+        fb = Feedback(
+            user_id=identity["id"],
+            event_id=event_id,
+            rating=rating,
+            comments=comment
+        )
+        
+        db.session.add(fb)
+        db.session.commit()
+        
+        return jsonify({"message": "Feedback saved!"}), 201
 
     @app.route('/events/<int:event_id>/register', methods=['POST', 'OPTIONS'])
     @jwt_required()
